@@ -1,4 +1,4 @@
-# uv run -w requests nuke_slack_thread.py
+# Usage: uv run -w requests nuke_slack_thread.py <oauth_token> <thread_url>
 
 import sys
 import re
