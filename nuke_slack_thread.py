@@ -5,7 +5,7 @@ import re
 import requests
 
 
-def parse_thread_url(url: str) -> (str, str):
+def parse_thread_url(url: str) -> tuple[str, str]:
     # Example: https://yourworkspace.slack.com/archives/C12345678/p1700000000000000
     match = re.search(r"/archives/([A-Z0-9]+)/p(\d{16})", url)
     assert match, "Invalid Slack thread URL"
@@ -22,7 +22,7 @@ def get_thread_messages(oauth_token: str, channel_id: str, ts: str) -> list:
     return res.get("messages", [])
 
 
-def delete_message(oauth_token: str, channel_id: str, ts: str):
+def delete_message(oauth_token: str, channel_id: str, ts: str) -> None:
     url = "https://slack.com/api/chat.delete"
     data = {"channel": channel_id, "ts": ts}
     headers = {"Authorization": f"Bearer {oauth_token}"}
