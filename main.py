@@ -165,12 +165,12 @@ async def delete_thread(token: str, channel: str, ts: str) -> int:
 
 
 @app.get("/")
-def home():
+def home() -> HTMLResponse:
     return HTMLResponse("<a href='/slack/install'>Install Thread Nuker</a>")
 
 
 @app.get("/slack/install")
-def slack_install(req: Request):
+def slack_install(req: Request) -> RedirectResponse:
     redirect_uri = f"{req.base_url}slack/oauth_redirect"
     scope = ",".join(
         [
@@ -192,7 +192,7 @@ def slack_install(req: Request):
 
 
 @app.get("/slack/oauth_redirect")
-async def oauth_redirect(req: Request):
+async def oauth_redirect(req: Request) -> HTMLResponse:
     code = req.query_params.get("code")
     if not code:
         raise HTTPException(status_code=400, detail="Missing code")
@@ -204,7 +204,7 @@ async def oauth_redirect(req: Request):
 
 async def delete_thread_and_respond(
     token: str, channel: str, ts: str, response_url: str
-):
+) -> None:
     num_deleted = await delete_thread(token, channel, ts)
     async with httpx.AsyncClient() as client:
         await client.post(
@@ -217,7 +217,7 @@ async def delete_thread_and_respond(
 
 
 @app.post("/slack/interactive")
-async def interactive(req: Request, background: BackgroundTasks):
+async def interactive(req: Request, background: BackgroundTasks) -> JSONResponse:
     body = await req.body()
     verify_slack_signature(req, body)
     form = await req.form()
