@@ -228,7 +228,7 @@ async def delete_thread_and_respond(payload: dict[str, Any], install_url: str) -
 
     ndel, ntot = await delete_thread(token, channel, ts)
     await respond(
-        f"{'🟢' if ndel == ntot else '🟡'} Deleted {ndel} of {ntot} messages."
+        f"{'🟢' if ndel == ntot else '🟡'} Deleted {ndel} of {ntot} message(s)."
     )
 
 
