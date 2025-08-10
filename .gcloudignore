@@ -1,4 +1,5 @@
-.env
+.git/
 .user_token
+.ruff_cache/
 .venv/
 __pycache__/

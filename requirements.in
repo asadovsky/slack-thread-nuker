@@ -1,0 +1,7 @@
+fastapi
+google-cloud-datastore
+httpx
+pyright
+python-dotenv
+ruff
+uvicorn

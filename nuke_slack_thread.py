@@ -7,9 +7,12 @@ import time
 import webbrowser
 
 import dotenv
-import requests
+import httpx
 from flask import Flask, request
 from slack_sdk import WebClient
+
+OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
+OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
 
 log = logging.getLogger("werkzeug")
 log.setLevel(logging.ERROR)
@@ -17,8 +20,8 @@ app = Flask(__name__)
 auth_code = None
 
 
-@app.route("/oauth/callback")
-def oauth_callback():
+@app.route("/oauth/redirect")  # pyright: ignore [reportUntypedFunctionDecorator]
+def oauth_redirect() -> tuple[str, int]:
     global auth_code
     auth_code = request.args.get("code")
     if auth_code:
@@ -26,8 +29,8 @@ def oauth_callback():
     return "<html><body>OAuth failure</body></html>", 400
 
 
-def do_oauth(client_id: str, client_secret: str) -> str:
-    # Start local server for OAuth callback.
+def get_user_token_via_oauth() -> str:
+    # Start local server for OAuth redirect.
     server_thread = threading.Thread(
         target=lambda: app.run(host="localhost", port=8080, ssl_context="adhoc"),
         daemon=True,
@@ -35,14 +38,23 @@ def do_oauth(client_id: str, client_secret: str) -> str:
     server_thread.start()
 
     # Open OAuth URL.
-    redirect_uri = "https://localhost:8080/oauth/callback"
-    auth_url = (
-        f"https://slack.com/oauth/v2/authorize?"
-        f"client_id={client_id}&"
-        f"redirect_uri={redirect_uri}&"
-        f"user_scope=channels:history,chat:write,groups:history,im:history,mpim:history"
+    redirect_uri = "https://localhost:8080/oauth/redirect"
+    scope = ",".join(
+        [
+            "channels:history",
+            "chat:write",
+            "groups:history",
+            "im:history",
+            "mpim:history",
+        ]
     )
-    webbrowser.open(auth_url)
+    webbrowser.open(
+        f"{OAUTH_AUTHORIZE_URL}"
+        f"?client_id={os.getenv('SLACK_CLIENT_ID')}"
+        f"&redirect_uri={redirect_uri}"
+        f"&scope={scope}"
+        f"&user_scope={scope}"
+    )
 
     # Wait for auth code.
     start_time = time.time()
@@ -51,19 +63,17 @@ def do_oauth(client_id: str, client_secret: str) -> str:
     assert auth_code, "OAuth timed out or failed"
 
     # Exchange auth code for token.
-    token_url = "https://slack.com/api/oauth.v2.access"
-    data = {
-        "client_id": client_id,
-        "client_secret": client_secret,
-        "code": auth_code,
-        "redirect_uri": redirect_uri,
-    }
-    res = requests.post(token_url, data=data).json()
-    assert res.get("ok"), f"OAuth failed: {res['error']}"
-
-    user_token = res["authed_user"]["access_token"]
-    WebClient(token=user_token).auth_test()
-    return user_token
+    res = httpx.post(
+        OAUTH_ACCESS_URL,
+        data={
+            "client_id": os.getenv("SLACK_CLIENT_ID"),
+            "client_secret": os.getenv("SLACK_CLIENT_SECRET"),
+            "code": auth_code,
+            "redirect_uri": redirect_uri,
+        },
+    ).json()
+    assert res["ok"], f"OAuth exchange failed: {res['error']}"
+    return res["authed_user"]["access_token"]
 
 
 def parse_thread_url(url: str) -> tuple[str, str]:
@@ -85,19 +95,22 @@ def main() -> None:
         with open(user_token_file) as f:
             user_token = f.read().strip()
     except FileNotFoundError:
-        user_token = do_oauth(os.environ["CLIENT_ID"], os.environ["CLIENT_SECRET"])
+        user_token = get_user_token_via_oauth()
         with open(user_token_file, "w") as f:
             f.write(user_token)
 
     client = WebClient(token=user_token)
     channel, ts = parse_thread_url(args.thread)
-    messages = client.conversations_replies(
-        channel=channel,
-        ts=ts,
-        inclusive=True,
-    )["messages"]
-    for message in messages:
-        client.chat_delete(channel=channel, ts=message["ts"])
+    msgs = (
+        client.conversations_replies(
+            channel=channel,
+            ts=ts,
+            inclusive=True,
+        )["messages"]
+        or []
+    )
+    for msg in msgs:
+        client.chat_delete(channel=channel, ts=msg["ts"])
 
 
 if __name__ == "__main__":

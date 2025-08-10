@@ -1,0 +1,13 @@
+{
+  "reportIncompatibleMethodOverride": "none",
+  "reportMissingImports": "none",
+  "reportMissingTypeArgument": "none",
+  "reportMissingTypeStubs": "none",
+  "reportUnknownArgumentType": "none",
+  "reportUnknownLambdaType": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownParameterType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUntypedBaseClass": "none",
+  "typeCheckingMode": "strict"
+}

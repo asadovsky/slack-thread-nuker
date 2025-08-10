@@ -1,0 +1,8 @@
+target-version = "py312"
+extend-include = ["*.ipynb"]
+
+[lint]
+select = ["E", "F", "I", "PLC", "PLE", "UP"]
+
+[lint.extend-per-file-ignores]
+"*.ipynb" = ["PLE1142"]
