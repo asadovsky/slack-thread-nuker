@@ -5,6 +5,7 @@ import json
 import os
 import time
 from typing import Any
+from urllib.parse import urljoin
 
 import dotenv
 import httpx
@@ -19,6 +20,7 @@ from google.cloud import datastore
 
 OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
 OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
+OAUTH_REDIRECT_PATH = "/slack/oauth-redirect"
 DS_KIND_SLACK_USER_TOKEN = "SlackUserToken"
 
 app = FastAPI()
@@ -171,7 +173,7 @@ def home() -> HTMLResponse:
 
 @app.get("/slack/install")
 def slack_install(req: Request) -> RedirectResponse:
-    redirect_uri = f"{req.base_url}slack/oauth-redirect"
+    redirect_uri = urljoin(str(req.base_url), OAUTH_REDIRECT_PATH)
     scope = ",".join(
         [
             "channels:history",
@@ -191,12 +193,12 @@ def slack_install(req: Request) -> RedirectResponse:
     )
 
 
-@app.get("/slack/oauth-redirect")
+@app.get(OAUTH_REDIRECT_PATH)
 async def oauth_redirect(req: Request) -> HTMLResponse:
     code = req.query_params.get("code")
     if not code:
         raise HTTPException(status_code=400, detail="Missing code")
-    redirect_uri = f"{req.base_url}slack/oauth-redirect"
+    redirect_uri = urljoin(str(req.base_url), OAUTH_REDIRECT_PATH)
     team_id, user_id, user_token = await do_oauth_exchange(code, redirect_uri)
     save_user_token(team_id, user_id, user_token)
     return HTMLResponse("OK")

@@ -5,6 +5,7 @@ import re
 import threading
 import time
 import webbrowser
+from urllib.parse import urljoin
 
 import dotenv
 import httpx
@@ -13,6 +14,7 @@ from slack_sdk import WebClient
 
 OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
 OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
+OAUTH_REDIRECT_PATH = "/slack/oauth-redirect"
 
 log = logging.getLogger("werkzeug")
 log.setLevel(logging.ERROR)
@@ -20,7 +22,7 @@ app = Flask(__name__)
 auth_code = None
 
 
-@app.route("/slack/oauth-redirect")  # pyright: ignore [reportUntypedFunctionDecorator]
+@app.route(OAUTH_REDIRECT_PATH)  # pyright: ignore [reportUntypedFunctionDecorator]
 def oauth_redirect() -> tuple[str, int]:
     global auth_code
     auth_code = request.args.get("code")
@@ -38,7 +40,7 @@ def get_user_token_via_oauth() -> str:
     server_thread.start()
 
     # Open OAuth URL.
-    redirect_uri = "https://localhost:8080/slack/oauth-redirect"
+    redirect_uri = urljoin("https://localhost:8080", OAUTH_REDIRECT_PATH)
     scope = ",".join(
         [
             "channels:history",
