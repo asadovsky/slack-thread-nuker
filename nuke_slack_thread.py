@@ -12,8 +12,9 @@ import httpx
 from flask import Flask, request
 from slack_sdk import WebClient
 
-OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
 OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
+OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
+
 OAUTH_REDIRECT_PATH = "/slack/oauth-redirect"
 
 log = logging.getLogger("werkzeug")
@@ -27,8 +28,8 @@ def oauth_redirect() -> tuple[str, int]:
     global auth_code
     auth_code = request.args.get("code")
     if auth_code:
-        return "<html><body>OAuth success</body></html>", 200
-    return "<html><body>OAuth failure</body></html>", 400
+        return "Success", 200
+    return "Failure", 400
 
 
 def get_user_token_via_oauth() -> str:

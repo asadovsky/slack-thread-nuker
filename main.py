@@ -18,9 +18,12 @@ from fastapi.responses import (
 )
 from google.cloud import datastore
 
-OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
 OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
+OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
+
+INSTALL_PATH = "/slack/install"
 OAUTH_REDIRECT_PATH = "/slack/oauth-redirect"
+
 DS_KIND_SLACK_USER_TOKEN = "SlackUserToken"
 
 app = FastAPI()
@@ -153,23 +156,24 @@ async def delete_msg(token: str, channel: str, ts: str) -> dict[str, Any]:
     return res  # pyright: ignore [reportPossiblyUnboundVariable]
 
 
-async def delete_thread(token: str, channel: str, ts: str) -> int:
+async def delete_thread(token: str, channel: str, ts: str) -> tuple[int, int]:
     """Deletes all messages from the given thread in reverse chronological order."""
-    num_deleted = 0
+    ndel, ntot = 0, 0
     msgs = await get_thread_msgs(token, channel, ts)
     for msg in sorted(msgs, key=lambda x: float(x["ts"]), reverse=True):
+        ntot += 1
         res = await delete_msg(token, channel, msg["ts"])
         if res["ok"]:
-            num_deleted += 1
-    return num_deleted
+            ndel += 1
+    return ndel, ntot
 
 
 @app.get("/")
-def home() -> HTMLResponse:
-    return HTMLResponse("<a href='/slack/install'>Install Thread Nuker</a>")
+def home(req: Request) -> HTMLResponse:
+    return HTMLResponse(f"<a href='{INSTALL_PATH}'>Install Thread Nuker</a>")
 
 
-@app.get("/slack/install")
+@app.get(INSTALL_PATH)
 def slack_install(req: Request) -> RedirectResponse:
     redirect_uri = urljoin(str(req.base_url), OAUTH_REDIRECT_PATH)
     scope = ",".join(
@@ -199,10 +203,10 @@ async def oauth_redirect(req: Request) -> HTMLResponse:
     redirect_uri = urljoin(str(req.base_url), OAUTH_REDIRECT_PATH)
     team_id, user_id, user_token = await do_oauth_exchange(code, redirect_uri)
     save_user_token(team_id, user_id, user_token)
-    return HTMLResponse("OK")
+    return HTMLResponse("Success")
 
 
-async def delete_thread_and_respond(payload: dict[str, Any]) -> None:
+async def delete_thread_and_respond(payload: dict[str, Any], install_url: str) -> None:
     team_id = payload["team"]["id"]
     user_id = payload["user"]["id"]
     channel = payload["channel"]["id"]
@@ -215,15 +219,17 @@ async def delete_thread_and_respond(payload: dict[str, Any]) -> None:
             await client.post(response_url, json={"text": text})
 
     if thread_ts and thread_ts != ts:
-        return await respond("Not the root message of thread.")
+        return await respond("🔴 Not the root message of thread.")
     token = get_user_token(team_id, user_id)
     if not token:
-        return await respond("Missing user token.")
+        return await respond(f"🔴 Unknown user, please <{install_url}|reinstall>.")
     if not await is_admin(token, user_id):
-        return await respond("Not an admin.")
+        return await respond("🔴 Not an admin.")
 
-    num_deleted = await delete_thread(token, channel, ts)
-    await respond(f"Deleted {num_deleted} message{'' if num_deleted == 1 else 's'}.")
+    ndel, ntot = await delete_thread(token, channel, ts)
+    await respond(
+        f"{'🟢' if ndel == ntot else '🟡'} Deleted {ndel} of {ntot} messages."
+    )
 
 
 @app.post("/slack/interactive")
@@ -238,7 +244,8 @@ async def interactive(req: Request, bg_tasks: BackgroundTasks) -> JSONResponse:
         payload["type"] == "message_action"
         and payload["callback_id"] == "nuke_thread_action"
     )
-    bg_tasks.add_task(delete_thread_and_respond, payload)
+    install_url = urljoin(str(req.base_url), INSTALL_PATH)
+    bg_tasks.add_task(delete_thread_and_respond, payload, install_url)
     return JSONResponse({})
 
 
