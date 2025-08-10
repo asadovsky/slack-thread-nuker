@@ -171,7 +171,7 @@ def home() -> HTMLResponse:
 
 @app.get("/slack/install")
 def slack_install(req: Request) -> RedirectResponse:
-    redirect_uri = f"{req.base_url}slack/oauth_redirect"
+    redirect_uri = f"{req.base_url}slack/oauth-redirect"
     scope = ",".join(
         [
             "channels:history",
@@ -191,12 +191,12 @@ def slack_install(req: Request) -> RedirectResponse:
     )
 
 
-@app.get("/slack/oauth_redirect")
+@app.get("/slack/oauth-redirect")
 async def oauth_redirect(req: Request) -> HTMLResponse:
     code = req.query_params.get("code")
     if not code:
         raise HTTPException(status_code=400, detail="Missing code")
-    redirect_uri = f"{req.base_url}slack/oauth_redirect"
+    redirect_uri = f"{req.base_url}slack/oauth-redirect"
     team_id, user_id, user_token = await do_oauth_exchange(code, redirect_uri)
     save_user_token(team_id, user_id, user_token)
     return HTMLResponse("OK")

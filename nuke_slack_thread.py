@@ -20,7 +20,7 @@ app = Flask(__name__)
 auth_code = None
 
 
-@app.route("/oauth/redirect")  # pyright: ignore [reportUntypedFunctionDecorator]
+@app.route("/slack/oauth-redirect")  # pyright: ignore [reportUntypedFunctionDecorator]
 def oauth_redirect() -> tuple[str, int]:
     global auth_code
     auth_code = request.args.get("code")
@@ -38,7 +38,7 @@ def get_user_token_via_oauth() -> str:
     server_thread.start()
 
     # Open OAuth URL.
-    redirect_uri = "https://localhost:8080/oauth/redirect"
+    redirect_uri = "https://localhost:8080/slack/oauth-redirect"
     scope = ",".join(
         [
             "channels:history",
