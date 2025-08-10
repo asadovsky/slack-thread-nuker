@@ -82,7 +82,7 @@ def verify_slack_signature(req: Request, body: bytes) -> None:
     if abs(time.time() - int(ts)) > 60 * 5:
         raise HTTPException(status_code=401, detail="Stale request")
     digest = hmac.new(
-        os.getenv("SLACK_CLIENT_SECRET", "").encode(),
+        os.getenv("SLACK_SIGNING_SECRET", "").encode(),
         f"v0:{ts}:{body.decode()}".encode(),
         hashlib.sha256,
     ).hexdigest()
@@ -118,9 +118,7 @@ async def is_admin(token: str, user_id: str) -> bool:
     return bool(data["ok"] and data["user"]["is_admin"])
 
 
-async def get_thread_messages(
-    token: str, channel: str, ts: str
-) -> list[dict[str, Any]]:
+async def get_thread_msgs(token: str, channel: str, ts: str) -> list[dict[str, Any]]:
     """Returns all messages from the given thread."""
     msgs: list[dict[str, Any]] = []
     cursor = None
@@ -135,7 +133,7 @@ async def get_thread_messages(
         data = await slack_api_get(token, "conversations.replies", params)
         if not data["ok"]:
             raise HTTPException(
-                status_code=400, detail=f"conversations.replies failed: {data}"
+                status_code=400, detail=f"conversations.replies failed: {data['error']}"
             )
         msgs.extend(data.get("messages", []))
         cursor = data.get("response_metadata", {}).get("next_cursor")
@@ -144,7 +142,7 @@ async def get_thread_messages(
     return msgs
 
 
-async def delete_message(token: str, channel: str, ts: str) -> dict[str, Any]:
+async def delete_msg(token: str, channel: str, ts: str) -> dict[str, Any]:
     """Deletes the given message."""
     for i in range(3):
         res = await slack_api_post(token, "chat.delete", {"channel": channel, "ts": ts})
@@ -158,9 +156,9 @@ async def delete_message(token: str, channel: str, ts: str) -> dict[str, Any]:
 async def delete_thread(token: str, channel: str, ts: str) -> int:
     """Deletes all messages from the given thread in reverse chronological order."""
     num_deleted = 0
-    msgs = await get_thread_messages(token, channel, ts)
+    msgs = await get_thread_msgs(token, channel, ts)
     for msg in sorted(msgs, key=lambda x: float(x["ts"]), reverse=True):
-        res = await delete_message(token, channel, msg["ts"])
+        res = await delete_msg(token, channel, msg["ts"])
         if res["ok"]:
             num_deleted += 1
     return num_deleted
@@ -204,52 +202,44 @@ async def oauth_redirect(req: Request) -> HTMLResponse:
     return HTMLResponse("OK")
 
 
-async def delete_thread_and_respond(
-    token: str, channel: str, ts: str, response_url: str
-) -> None:
+async def delete_thread_and_respond(payload: dict[str, Any]) -> None:
+    team_id = payload["team"]["id"]
+    user_id = payload["user"]["id"]
+    channel = payload["channel"]["id"]
+    thread_ts = payload["message"].get("thread_ts")
+    ts = payload["message"]["ts"]
+    response_url = payload["response_url"]
+
+    async def respond(text: str) -> None:
+        async with httpx.AsyncClient() as client:
+            await client.post(response_url, json={"text": text})
+
+    if thread_ts and thread_ts != ts:
+        return await respond("Not the root message of thread.")
+    token = get_user_token(team_id, user_id)
+    if not token:
+        return await respond("Missing user token.")
+    if not await is_admin(token, user_id):
+        return await respond("Not an admin.")
+
     num_deleted = await delete_thread(token, channel, ts)
-    async with httpx.AsyncClient() as client:
-        await client.post(
-            response_url,
-            json={
-                "response_type": "ephemeral",
-                "text": f"Deleted {num_deleted} messages.",
-            },
-        )
+    await respond(f"Deleted {num_deleted} message{'' if num_deleted == 1 else 's'}.")
 
 
 @app.post("/slack/interactive")
-async def interactive(req: Request, background: BackgroundTasks) -> JSONResponse:
+async def interactive(req: Request, bg_tasks: BackgroundTasks) -> JSONResponse:
     body = await req.body()
     verify_slack_signature(req, body)
     form = await req.form()
     payload_str = form["payload"]
-    if not payload_str:
-        raise HTTPException(status_code=400, detail="Missing payload")
     assert isinstance(payload_str, str)
     payload = json.loads(payload_str)
-    if (
-        payload["type"] != "message_action"
-        or payload["callback_id"] != "nuke_thread_action"
-    ):
-        raise HTTPException(status_code=400, detail=f"Unexpected payload: {payload}")
-
-    team_id = payload["team"]["id"]
-    user_id = payload["user"]["id"]
-    channel = payload["channel"]["id"]
-    ts = payload["message"]["thread_ts"] or payload["message"]["ts"]
-    response_url = payload["response_url"]
-
-    token = get_user_token(team_id, user_id)
-    if not token:
-        return JSONResponse(
-            {"response_type": "ephemeral", "text": "Missing user token."}
-        )
-    if not await is_admin(token, user_id):
-        return JSONResponse({"response_type": "ephemeral", "text": "Not an admin."})
-
-    background.add_task(delete_thread_and_respond, token, channel, ts, response_url)
-    return JSONResponse({"response_type": "ephemeral", "text": "Deleting thread..."})
+    assert (
+        payload["type"] == "message_action"
+        and payload["callback_id"] == "nuke_thread_action"
+    )
+    bg_tasks.add_task(delete_thread_and_respond, payload)
+    return JSONResponse({})
 
 
 def main() -> None:
