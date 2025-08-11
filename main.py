@@ -199,7 +199,7 @@ def slack_install(req: Request) -> RedirectResponse:
 async def oauth_redirect(req: Request) -> HTMLResponse:
     code = req.query_params.get("code")
     if not code:
-        raise HTTPException(status_code=400, detail="Missing code")
+        return HTMLResponse("Failure", status_code=400)
     redirect_uri = urljoin(str(req.base_url), OAUTH_REDIRECT_PATH)
     team_id, user_id, user_token = await do_oauth_exchange(code, redirect_uri)
     save_user_token(team_id, user_id, user_token)
