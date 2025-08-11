@@ -40,3 +40,9 @@ Add a new package (using `numpy` as an example):
 ```
 uv run -w cryptography,dotenv,flask,httpx,slack_sdk nuke_slack_thread.py --thread=https://microsoft-ai.slack.com/archives/C09A85QAW0G/p1754623024351449
 ```
+
+## Development
+
+```
+npx prettier --write slack_app_manifest.json
+```

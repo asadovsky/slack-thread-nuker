@@ -1,0 +1,53 @@
+{
+  "display_information": {
+    "name": "Thread Nuker"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Thread Nuker",
+      "always_online": false
+    },
+    "shortcuts": [
+      {
+        "name": "Nuke thread",
+        "type": "message",
+        "callback_id": "nuke_thread_action",
+        "description": "Delete all messages in this thread"
+      }
+    ]
+  },
+  "oauth_config": {
+    "redirect_urls": [
+      "https://localhost:8080/slack/oauth-redirect",
+      "https://slack-thread-nuker.uc.r.appspot.com/slack/oauth-redirect"
+    ],
+    "scopes": {
+      "user": [
+        "channels:history",
+        "chat:write",
+        "groups:history",
+        "im:history",
+        "mpim:history",
+        "users:read"
+      ],
+      "bot": [
+        "commands",
+        "channels:history",
+        "chat:write",
+        "groups:history",
+        "im:history",
+        "mpim:history",
+        "users:read"
+      ]
+    }
+  },
+  "settings": {
+    "interactivity": {
+      "is_enabled": true,
+      "request_url": "https://slack-thread-nuker.uc.r.appspot.com/slack/interactive"
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}
