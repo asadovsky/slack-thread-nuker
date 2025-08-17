@@ -9,6 +9,5 @@ uv run -w cryptography,dotenv,flask,httpx,slack_sdk nuke_slack_thread.py --threa
 ## Development
 
 ```
-npx prettier --write slack_app_manifest.json
 uv export --format requirements-txt > requirements.txt
 ```
