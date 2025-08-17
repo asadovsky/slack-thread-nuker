@@ -1,8 +1,0 @@
-fastapi
-google-cloud-datastore
-httpx
-pyright
-python-dotenv
-python-multipart
-ruff
-uvicorn
