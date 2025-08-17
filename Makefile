@@ -1,4 +1,5 @@
 SHELL := /bin/bash -euo pipefail
+PATH := node_modules/.bin:$(PATH)
 PROJECT := slack-thread-nuker
 
 .DELETE_ON_ERROR:
