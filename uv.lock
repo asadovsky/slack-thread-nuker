@@ -494,11 +494,15 @@ dependencies = [
     { name = "fastapi" },
     { name = "google-cloud-datastore" },
     { name = "httpx" },
-    { name = "pyright" },
     { name = "python-dotenv" },
     { name = "python-multipart" },
-    { name = "ruff" },
     { name = "uvicorn" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pyright" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -506,11 +510,15 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.116.1" },
     { name = "google-cloud-datastore", specifier = ">=2.21.0" },
     { name = "httpx", specifier = ">=0.28.1" },
-    { name = "pyright", specifier = ">=1.1.403" },
     { name = "python-dotenv", specifier = ">=1.1.1" },
     { name = "python-multipart", specifier = ">=0.0.20" },
-    { name = "ruff", specifier = ">=0.12.9" },
     { name = "uvicorn", specifier = ">=0.35.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pyright", specifier = ">=1.1.403" },
+    { name = "ruff", specifier = ">=0.12.9" },
 ]
 
 [[package]]

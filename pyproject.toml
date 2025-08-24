@@ -7,9 +7,13 @@ dependencies = [
     "fastapi>=0.116.1",
     "google-cloud-datastore>=2.21.0",
     "httpx>=0.28.1",
-    "pyright>=1.1.403",
     "python-dotenv>=1.1.1",
     "python-multipart>=0.0.20",
-    "ruff>=0.12.9",
     "uvicorn>=0.35.0",
+]
+
+[dependency-groups]
+dev = [
+    "pyright>=1.1.403",
+    "ruff>=0.12.9",
 ]
