@@ -1,7 +1,0 @@
-{
-  "name": "slack-thread-nuker",
-  "version": "0.0.0",
-  "devDependencies": {
-    "prettier": "^3.6.2"
-  }
-}

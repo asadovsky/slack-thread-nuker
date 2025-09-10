@@ -16,7 +16,7 @@ from fastapi.responses import (
     JSONResponse,
     RedirectResponse,
 )
-from google.cloud import datastore
+from google.cloud import datastore  # pyright: ignore [reportAttributeAccessIssue]
 
 OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
 OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
@@ -168,12 +168,12 @@ async def delete_thread(token: str, channel: str, ts: str) -> tuple[int, int]:
     return ndel, ntot
 
 
-@app.get("/")
+@app.get("/")  # pyright: ignore [reportUntypedFunctionDecorator]
 def home(req: Request) -> HTMLResponse:
     return HTMLResponse(f"<a href='{INSTALL_PATH}'>Install Thread Nuker</a>")
 
 
-@app.get(INSTALL_PATH)
+@app.get(INSTALL_PATH)  # pyright: ignore [reportUntypedFunctionDecorator]
 def slack_install(req: Request) -> RedirectResponse:
     redirect_uri = urljoin(str(req.base_url), OAUTH_REDIRECT_PATH)
     scope = ",".join(
@@ -195,7 +195,7 @@ def slack_install(req: Request) -> RedirectResponse:
     )
 
 
-@app.get(OAUTH_REDIRECT_PATH)
+@app.get(OAUTH_REDIRECT_PATH)  # pyright: ignore [reportUntypedFunctionDecorator]
 async def oauth_redirect(req: Request) -> HTMLResponse:
     code = req.query_params.get("code")
     if not code:
@@ -232,7 +232,7 @@ async def delete_thread_and_respond(payload: dict[str, Any], install_url: str) -
     )
 
 
-@app.post("/slack/interactive")
+@app.post("/slack/interactive")  # pyright: ignore [reportUntypedFunctionDecorator]
 async def interactive(req: Request, bg_tasks: BackgroundTasks) -> JSONResponse:
     body = await req.body()
     verify_slack_signature(req, body)

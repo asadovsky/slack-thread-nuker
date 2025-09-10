@@ -487,6 +487,15 @@ wheels = [
 ]
 
 [[package]]
+name = "scm-kit"
+version = "0.0.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7d/d8/5f9938ee83ced12ebd34e21ea32ca96137fb5dbcefc47d8a89759026ffb5/scm_kit-0.0.3.tar.gz", hash = "sha256:bfc2199d9bc66088fa7948cf91a9e75d27c302a9eb39e217168f4a3ed1cf104b", size = 2147, upload-time = "2025-09-10T05:49:12.199Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a9/d9/d7b6fb3490e84c5c3554cc0b396c7fa11dd3163311e346c4d72713657a07/scm_kit-0.0.3-py3-none-any.whl", hash = "sha256:8ac46e530164ccc30edd581f20b8a7f33c1bc94008e6d004e2ca0ad48f9b8b29", size = 3034, upload-time = "2025-09-10T05:49:11.177Z" },
+]
+
+[[package]]
 name = "slack-thread-nuker"
 version = "0.0.0"
 source = { virtual = "." }
@@ -503,6 +512,7 @@ dependencies = [
 dev = [
     { name = "pyright" },
     { name = "ruff" },
+    { name = "scm-kit" },
 ]
 
 [package.metadata]
@@ -519,6 +529,7 @@ requires-dist = [
 dev = [
     { name = "pyright", specifier = ">=1.1.403" },
     { name = "ruff", specifier = ">=0.12.9" },
+    { name = "scm-kit", specifier = ">=0.0.3" },
 ]
 
 [[package]]

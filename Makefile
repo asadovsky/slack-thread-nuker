@@ -28,12 +28,12 @@ gc-no-traffic:
 
 .PHONY: fmt
 fmt:
-	@./fmt_or_lint.sh -f
+	@scm-format
 
 .PHONY: lint
 lint:
-	@./fmt_or_lint.sh
+	@scm-lint
 
 .PHONY: lint-all
 lint-all:
-	@./fmt_or_lint.sh -a
+	@scm-lint -a
