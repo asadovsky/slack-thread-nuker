@@ -2,4 +2,3 @@
 .user_token
 .venv/
 __pycache__/
-node_modules/
