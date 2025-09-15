@@ -16,7 +16,7 @@ from fastapi.responses import (
     JSONResponse,
     RedirectResponse,
 )
-from google.cloud import datastore  # pyright: ignore [reportAttributeAccessIssue]
+from google.cloud import datastore  # pyright: ignore[reportAttributeAccessIssue]
 
 OAUTH_ACCESS_URL = "https://slack.com/api/oauth.v2.access"
 OAUTH_AUTHORIZE_URL = "https://slack.com/oauth/v2/authorize"
@@ -153,7 +153,7 @@ async def delete_msg(token: str, channel: str, ts: str) -> dict[str, Any]:
             time.sleep(2**i)
             continue
         return res
-    return res  # pyright: ignore [reportPossiblyUnboundVariable]
+    return res  # pyright: ignore[reportPossiblyUnboundVariable]
 
 
 async def delete_thread(token: str, channel: str, ts: str) -> tuple[int, int]:
