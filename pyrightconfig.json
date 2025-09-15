@@ -9,5 +9,6 @@
   "reportUnknownParameterType": "none",
   "reportUnknownVariableType": "none",
   "reportUntypedBaseClass": "none",
+  "reportUntypedFunctionDecorator": "none",
   "typeCheckingMode": "strict"
 }

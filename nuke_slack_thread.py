@@ -23,7 +23,7 @@ app = Flask(__name__)
 auth_code = None
 
 
-@app.route(OAUTH_REDIRECT_PATH)  # pyright: ignore [reportUntypedFunctionDecorator]
+@app.route(OAUTH_REDIRECT_PATH)
 def oauth_redirect() -> tuple[str, int]:
     global auth_code
     auth_code = request.args.get("code")

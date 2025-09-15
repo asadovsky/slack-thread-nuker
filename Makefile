@@ -27,12 +27,12 @@ gc-no-traffic:
 
 .PHONY: fmt
 fmt:
-	@scm-format
+	@uvx --from scm-kit scm-format
 
 .PHONY: lint
 lint:
-	@scm-lint
+	@uvx --from scm-kit scm-lint
 
 .PHONY: lint-all
 lint-all:
-	@scm-lint -a
+	@uvx --from scm-kit scm-lint -a

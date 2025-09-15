@@ -11,8 +11,3 @@ dependencies = [
     "python-multipart>=0.0.20",
     "uvicorn>=0.35.0",
 ]
-
-[dependency-groups]
-dev = [
-    "scm-kit>=0.0.3",
-]
