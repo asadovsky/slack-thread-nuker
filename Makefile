@@ -16,6 +16,7 @@ serve:
 
 .PHONY: deploy
 deploy:
+	uv export --format requirements-txt --no-dev > requirements.txt
 	gcloud app deploy --project=$(PROJECT) app.yaml
 
 .PHONY: gc-no-traffic
