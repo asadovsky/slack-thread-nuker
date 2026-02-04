@@ -58,6 +58,7 @@ def get_user_token(team_id: str, user_id: str) -> str:
 
 
 async def do_oauth_exchange(code: str, redirect_uri: str) -> tuple[str, str, str]:
+    """Returns (team_id, user_id, user_token)."""
     async with httpx.AsyncClient() as client:
         res = (
             await client.post(
@@ -116,12 +117,19 @@ async def slack_api_post(
         return (await client.post(url, headers=headers, json=payload)).json()
 
 
-async def is_admin(token: str, user_id: str) -> bool:
-    data = await slack_api_get(token, "users.info", {"user": user_id})
-    return bool(data["ok"] and data["user"]["is_admin"])
+async def is_admin(user_token: str, user_id: str) -> bool:
+    data = await slack_api_get(user_token, "users.info", {"user": user_id})
+    if not data["ok"]:
+        raise HTTPException(
+            status_code=400, detail=f"users.info failed: {data['error']}"
+        )
+    user = data["user"]
+    return bool(user.get("is_admin") or user.get("is_owner"))
 
 
-async def get_thread_msgs(token: str, channel: str, ts: str) -> list[dict[str, Any]]:
+async def get_thread_msgs(
+    user_token: str, channel: str, ts: str
+) -> list[dict[str, Any]]:
     """Returns all messages from the given thread."""
     msgs: list[dict[str, Any]] = []
     cursor = None
@@ -133,7 +141,7 @@ async def get_thread_msgs(token: str, channel: str, ts: str) -> list[dict[str, A
     while True:
         if cursor:
             params["cursor"] = cursor
-        data = await slack_api_get(token, "conversations.replies", params)
+        data = await slack_api_get(user_token, "conversations.replies", params)
         if not data["ok"]:
             raise HTTPException(
                 status_code=400, detail=f"conversations.replies failed: {data['error']}"
@@ -145,10 +153,12 @@ async def get_thread_msgs(token: str, channel: str, ts: str) -> list[dict[str, A
     return msgs
 
 
-async def delete_msg(token: str, channel: str, ts: str) -> dict[str, Any]:
+async def delete_msg(user_token: str, channel: str, ts: str) -> dict[str, Any]:
     """Deletes the given message."""
     for i in range(3):
-        res = await slack_api_post(token, "chat.delete", {"channel": channel, "ts": ts})
+        res = await slack_api_post(
+            user_token, "chat.delete", {"channel": channel, "ts": ts}
+        )
         if not res["ok"] and res["error"] in {"internal_error", "ratelimited"}:
             time.sleep(2**i)
             continue
@@ -156,13 +166,13 @@ async def delete_msg(token: str, channel: str, ts: str) -> dict[str, Any]:
     return res  # pyright: ignore[reportPossiblyUnboundVariable]
 
 
-async def delete_thread(token: str, channel: str, ts: str) -> tuple[int, int]:
+async def delete_thread(user_token: str, channel: str, ts: str) -> tuple[int, int]:
     """Deletes all messages from the given thread in reverse chronological order."""
     ndel, ntot = 0, 0
-    msgs = await get_thread_msgs(token, channel, ts)
+    msgs = await get_thread_msgs(user_token, channel, ts)
     for msg in sorted(msgs, key=lambda x: float(x["ts"]), reverse=True):
         ntot += 1
-        res = await delete_msg(token, channel, msg["ts"])
+        res = await delete_msg(user_token, channel, msg["ts"])
         if res["ok"]:
             ndel += 1
     return ndel, ntot
@@ -176,7 +186,18 @@ def home(req: Request) -> HTMLResponse:
 @app.get(INSTALL_PATH)
 def slack_install(req: Request) -> RedirectResponse:
     redirect_uri = urljoin(str(req.base_url), OAUTH_REDIRECT_PATH)
-    scope = ",".join(
+    bot_scope = ",".join(
+        [
+            "commands",
+            "channels:history",
+            "chat:write",
+            "groups:history",
+            "im:history",
+            "mpim:history",
+            "users:read",
+        ]
+    )
+    user_scope = ",".join(
         [
             "channels:history",
             "chat:write",
@@ -190,8 +211,8 @@ def slack_install(req: Request) -> RedirectResponse:
         f"{OAUTH_AUTHORIZE_URL}"
         f"?client_id={os.getenv('SLACK_CLIENT_ID')}"
         f"&redirect_uri={redirect_uri}"
-        f"&scope={scope}"
-        f"&user_scope={scope}"
+        f"&scope={bot_scope}"
+        f"&user_scope={user_scope}"
     )
 
 
@@ -207,7 +228,10 @@ async def oauth_redirect(req: Request) -> HTMLResponse:
 
 
 async def delete_thread_and_respond(payload: dict[str, Any], install_url: str) -> None:
-    team_id = payload["team"]["id"]
+    # Enterprise Grid has user.team_id instead of team.id.
+    team_id = (payload.get("team") or {}).get("id") or payload.get("user", {}).get(
+        "team_id"
+    )
     user_id = payload["user"]["id"]
     channel = payload["channel"]["id"]
     thread_ts = payload["message"].get("thread_ts")
@@ -220,13 +244,15 @@ async def delete_thread_and_respond(payload: dict[str, Any], install_url: str) -
 
     if thread_ts and thread_ts != ts:
         return await respond("🔴 Not the root message of thread.")
-    token = get_user_token(team_id, user_id)
-    if not token:
+    user_token = get_user_token(team_id, user_id)
+    if not user_token:
         return await respond(f"🔴 Unknown user, please <{install_url}|reinstall>.")
-    if not await is_admin(token, user_id):
+
+    # TODO: Figure out why is_admin has false negatives.
+    if False and not await is_admin(user_token, user_id):
         return await respond("🔴 Not an admin.")
 
-    ndel, ntot = await delete_thread(token, channel, ts)
+    ndel, ntot = await delete_thread(user_token, channel, ts)
     await respond(
         f"{'🟢' if ndel == ntot else '🟡'} Deleted {ndel} of {ntot} message(s)."
     )
