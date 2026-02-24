@@ -1,5 +1,5 @@
 .git/
-.user_token
 .ruff_cache/
+.user_token
 .venv/
 __pycache__/
